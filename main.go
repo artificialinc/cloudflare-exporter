@@ -15,16 +15,17 @@ import (
 )
 
 var (
-	cfgListen       = ":8080"
-	cfgCfAPIKey     = ""
-	cfgCfAPIEmail   = ""
-	cfgCfAPIToken   = ""
-	cfgMetricsPath  = "/metrics"
-	cfgZones        = ""
-	cfgExcludeZones = ""
-	cfgScrapeDelay  = 300
-	cfgFreeTier     = false
-	cfgBatchSize    = 10
+	cfgListen         = ":8080"
+	cfgCfAPIKey       = ""
+	cfgCfAPIEmail     = ""
+	cfgCfAPIToken     = ""
+	cfgMetricsPath    = "/metrics"
+	cfgZones          = ""
+	cfgExcludeZones   = ""
+	cfgScrapeDelay    = 300
+	cfgFreeTier       = false
+	cfgBatchSize      = 10
+	cfgScrapeInterval = 600
 )
 
 func getTargetZones() []string {
@@ -140,6 +141,7 @@ func main() {
 	flag.IntVar(&cfgScrapeDelay, "scrape_delay", cfgScrapeDelay, "scrape delay in seconds, defaults to 300")
 	flag.IntVar(&cfgBatchSize, "cf_batch_size", cfgBatchSize, "cloudflare zones batch size (1-10), defaults to 10")
 	flag.BoolVar(&cfgFreeTier, "free_tier", cfgFreeTier, "scrape only metrics included in free plan")
+	flag.IntVar(&cfgScrapeInterval, "scrape_interval", cfgScrapeInterval, "scrape interval in seconds")
 	flag.Parse()
 	if !(len(cfgCfAPIToken) > 0 || (len(cfgCfAPIEmail) > 0 && len(cfgCfAPIKey) > 0)) {
 		log.Fatal("Please provide CF_API_KEY+CF_API_EMAIL or CF_API_TOKEN")
@@ -153,7 +155,8 @@ func main() {
 	customFormatter.FullTimestamp = true
 
 	go func() {
-		for ; true; <-time.NewTicker(60 * time.Second).C {
+		for ; true; <-time.NewTicker(time.Duration(cfgScrapeInterval) * time.Second).C {
+			log.Info("Scraping...")
 			go fetchMetrics()
 		}
 	}()

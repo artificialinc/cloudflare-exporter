@@ -198,7 +198,7 @@ var (
 	dnsRecordCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "cloudflare_dns_record_count",
 		Help: "DNS Record Count by zone id",
-	}, []string{"zone_id"},
+	}, []string{"zone_id", "zone_name"},
 	)
 )
 
@@ -451,16 +451,11 @@ func fetchDnsRecords(zones []cloudflare.Zone, wg *sync.WaitGroup) {
 	wg.Add(1)
 	defer wg.Done()
 
-	zoneIDs := extractZoneIDs(zones)
-	if len(zoneIDs) == 0 {
-		return
-	}
-
-	for _, id := range zoneIDs {
-		count, err := fetchDnsRecordCount(id)
+	for _, zone := range zones {
+		count, err := fetchDnsRecordCount(zone.ID)
 		if err != nil {
 			log.Error(err)
 		}
-		dnsRecordCount.With(prometheus.Labels{"zone_id": id}).Set(float64(count))
+		dnsRecordCount.With(prometheus.Labels{"zone_id": zone.ID, "zone_name": zone.Name}).Set(float64(count))
 	}
 }
