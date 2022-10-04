@@ -607,3 +607,23 @@ func filterNonFreePlanZones(zones []cloudflare.Zone) (filteredZones []cloudflare
 	}
 	return
 }
+
+func fetchDnsRecordCount(ID string) (int, error) {
+	var api *cloudflare.API
+	var err error
+	if len(cfgCfAPIToken) > 0 {
+		api, err = cloudflare.NewWithAPIToken(cfgCfAPIToken)
+	} else {
+		api, err = cloudflare.New(cfgCfAPIKey, cfgCfAPIEmail)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+	records, err := api.DNSRecords(ctx, ID, cloudflare.DNSRecord{})
+	if err != nil {
+		return 0, err
+	}
+	return len(records), nil
+}

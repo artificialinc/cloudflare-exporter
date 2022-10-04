@@ -8,6 +8,7 @@ import (
 	cloudflare "github.com/cloudflare/cloudflare-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -193,6 +194,12 @@ var (
 	},
 		[]string{"zone", "load_balancer_name", "pool_name", "origin_name"},
 	)
+
+	dnsRecordCount = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "cloudflare_dns_record_count",
+		Help: "DNS Record Count by zone id",
+	}, []string{"zone_id"},
+	)
 )
 
 func fetchWorkerAnalytics(account cloudflare.Account, wg *sync.WaitGroup) {
@@ -246,7 +253,7 @@ func fetchZoneColocationAnalytics(zones []cloudflare.Zone, wg *sync.WaitGroup) {
 		for _, c := range cg {
 			zoneColocationVisits.With(prometheus.Labels{"zone": name, "colocation": c.Dimensions.ColoCode, "host": c.Dimensions.Host}).Add(float64(c.Sum.Visits))
 			zoneColocationEdgeResponseBytes.With(prometheus.Labels{"zone": name, "colocation": c.Dimensions.ColoCode, "host": c.Dimensions.Host}).Add(float64(c.Sum.EdgeResponseBytes))
-      		zoneColocationRequestsTotal.With(prometheus.Labels{"zone": name, "colocation": c.Dimensions.ColoCode, "host": c.Dimensions.Host}).Add(float64(c.Count))
+			zoneColocationRequestsTotal.With(prometheus.Labels{"zone": name, "colocation": c.Dimensions.ColoCode, "host": c.Dimensions.Host}).Add(float64(c.Count))
 		}
 	}
 }
@@ -438,4 +445,22 @@ func addLoadBalancingRequestsAdaptive(z *lbResp, name string) {
 		}
 	}
 
+}
+
+func fetchDnsRecords(zones []cloudflare.Zone, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer wg.Done()
+
+	zoneIDs := extractZoneIDs(zones)
+	if len(zoneIDs) == 0 {
+		return
+	}
+
+	for _, id := range zoneIDs {
+		count, err := fetchDnsRecordCount(id)
+		if err != nil {
+			log.Error(err)
+		}
+		dnsRecordCount.With(prometheus.Labels{"zone_id": id}).Set(float64(count))
+	}
 }

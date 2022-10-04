@@ -120,9 +120,10 @@ func fetchMetrics() {
 		targetZones := filteredZones[:sliceLength]
 		filteredZones = filteredZones[len(targetZones):]
 
-		go fetchZoneAnalytics(targetZones, &wg)
-		go fetchZoneColocationAnalytics(targetZones, &wg)
-		go fetchLoadBalancerAnalytics(targetZones, &wg)
+		// go fetchZoneAnalytics(targetZones, &wg)
+		// go fetchZoneColocationAnalytics(targetZones, &wg)
+		// go fetchLoadBalancerAnalytics(targetZones, &wg)
+		go fetchDnsRecords(targetZones, &wg)
 	}
 
 	wg.Wait()
